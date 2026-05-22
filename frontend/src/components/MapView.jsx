@@ -176,7 +176,16 @@ export default function MapView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ fontSize: '0.85rem', padding: 'var(--sp-2) var(--sp-3)' }}
+                list="districts-stations-list"
               />
+              <datalist id="districts-stations-list">
+                {districtsList.map(d => (
+                  <option key={`dist-${d}`} value={d} />
+                ))}
+                {stations.map(s => (
+                  <option key={`st-${s.id}`} value={s.station_name} />
+                ))}
+              </datalist>
               <button type="submit" className="btn btn-primary btn-sm">
                 🔍
               </button>
