@@ -11,7 +11,28 @@ import {
   downloadReport
 } from '../api';
 
-const DISTRICTS = ['Colombo', 'Gampaha', 'Kalutara', 'Ratnapura', 'Galle', 'Matara', 'Kurunegala'];
+const DISTRICTS = [
+  'Colombo', 'Gampaha', 'Kalutara', 'Ratnapura', 'Galle', 
+  'Matara', 'Kurunegala', 'Kegalle', 'Hambantota', 'Kandy', 
+  'Moneragala', 'Badulla', 'Anuradhapura', 'Ampara', 'Polonnaruwa', 'Nuwara Eliya'
+];
+
+// Color mappings from CSS design system
+const RISK_COLORS = {
+  Low: '#22c55e',       // green
+  Medium: '#eab308',    // yellow
+  High: '#f97316',      // orange
+  Critical: '#ef4444'   // red
+};
+
+const getStatusClass = (status) => {
+  if (!status) return 'Low';
+  const s = status.toLowerCase();
+  if (s.includes('major')) return 'Critical';
+  if (s.includes('minor')) return 'High';
+  if (s.includes('alert') || s.includes('warning')) return 'Medium';
+  return 'Low';
+};
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -574,7 +595,7 @@ export default function AdminDashboard() {
                           </td>
                           <td>
                             <span className={`risk-badge risk-badge-${getStatusClass(st.alert_status)}`}>
-                              {st.alert_status}
+                              {st.alert_status || 'Normal'}
                             </span>
                           </td>
                           <td className="text-muted text-xs">

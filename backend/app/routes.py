@@ -171,6 +171,8 @@ def get_river_levels():
     if refresh:
         # Trigger scraper to pull the latest DMC water levels
         scrape_dmc_data()
+        # Trigger prediction run so all grid cells (including newly added ones) get initial predictions
+        run_predictions()
         
     conn = get_db_connection()
     cursor = conn.cursor()

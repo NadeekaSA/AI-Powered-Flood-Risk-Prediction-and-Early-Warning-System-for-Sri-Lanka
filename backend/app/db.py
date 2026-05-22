@@ -224,77 +224,164 @@ def seed_gauging_stations(cursor, postgis_available):
         except Exception as e:
             print(f"Error seeding station {s['name']}: {e}")
 
-def seed_grid_cells(cursor, postgis_available):
-    """Generates and seeds a grid of ~60 cells covering highly flood-prone basins in Sri Lanka."""
-    cursor.execute("SELECT count(*) FROM grid_cells")
+STATION_DISTRICT_MAP = {
+    # Existing / Known
+    "Hanwella": "Colombo",
+    "Dunamale": "Gampaha",
+    "Rathnapura": "Ratnapura",
+    "Kalawellawa": "Kalutara",
+    "Nagalagam Street": "Colombo",
+    "Magura": "Kalutara",
+    "Glencourse": "Colombo",
+    "Baddegama": "Galle",
+    "Panadugama": "Matara",
+    "Putupaula": "Kalutara",
+    "Ellagawa": "Ratnapura",
+    "Giriulla": "Kurunegala",
+    # New ones from the 39 stations
+    "Kithulgala": "Kegalle",
+    "Moraketiya": "Hambantota",
+    "Peradeniya": "Kandy",
+    "Thalgahagoda": "Matara",
+    "Katharagama": "Moneragala",
+    "Nakkala": "Moneragala",
+    "Siyambalanduwa": "Moneragala",
+    "Thaldena": "Badulla",
+    "Horowpothana": "Anuradhapura",
+    "Yaka Wewa": "Anuradhapura",
+    "Galgamuwa": "Kurunegala",
+    "Padiyathalawa": "Ampara",
+    "Wellawaya": "Moneragala",
+    "Kuda Oya": "Moneragala",
+    "Moragaswewa": "Kurunegala",
+    "Manampitiya": "Polonnaruwa",
+    "Thanamalwila": "Moneragala",
+    "Norwood": "Nuwara Eliya",
+    "Thanthirimale": "Anuradhapura",
+    "Nawalapitiya": "Kandy",
+    "Weraganthota": "Badulla",
+    "Holombuwa": "Kegalle",
+    "Badalgama": "Gampaha",
+    "Urawa": "Matara",
+    "Deraniyagala": "Kegalle",
+    "Pitabeddara": "Matara",
+    "Thawalama": "Galle",
+}
+
+BASIN_DISTRICT_MAP = {
+    "Kelani Ganga": "Colombo",
+    "Kalu Ganga": "Kalutara",
+    "Attanagalu Oya": "Gampaha",
+    "Gin Ganga": "Galle",
+    "Nilwala Ganga": "Matara",
+    "Maha Oya": "Kurunegala",
+    "Mahaweli Ganga": "Kandy",
+    "Walawe Ganga": "Hambantota",
+    "Menik Ganga": "Moneragala",
+    "Kumbukkan Oya": "Moneragala",
+    "Heda Oya": "Moneragala",
+    "Yan Oya": "Anuradhapura",
+    "Mukunu Oya": "Anuradhapura",
+    "Maa Oya": "Anuradhapura",
+    "Mee Oya": "Kurunegala",
+    "Maduru Oya": "Ampara",
+    "Kirindi Oya": "Moneragala",
+    "Deduru Oya": "Kurunegala",
+    "Malwathu Oya": "Anuradhapura",
+}
+
+def get_station_district(station_name, basin_name):
+    """Maps a gauging station or river basin to its appropriate geographical district in Sri Lanka."""
+    district = STATION_DISTRICT_MAP.get(station_name)
+    if district:
+        return district
+    district = BASIN_DISTRICT_MAP.get(basin_name)
+    if district:
+        return district
+    return "Colombo"
+
+def is_postgis_available(cursor):
+    """Checks if the PostGIS spatial extension is enabled in the database."""
+    try:
+        cursor.execute("SELECT 1 FROM pg_extension WHERE extname = 'postgis'")
+        return cursor.fetchone() is not None
+    except Exception:
+        return False
+
+def create_grid_cells_for_station(cursor, station_id, station_name, s_lat, s_lon, basin, postgis_available=False):
+    """Generates a 3x3 spatial grid centered around a gauging station if not already present."""
+    district = get_station_district(station_name, basin)
+    
+    # Check if grid cells already exist for this station
+    cursor.execute("SELECT COUNT(*) FROM grid_cells WHERE nearest_station_id = %s", (station_id,))
     count = cursor.fetchone()[0]
     if count > 0:
-        print("Grid cells already seeded.")
-        return
-        
-    print("Seeding spatial prediction grids...")
-    
+        # Check if coordinates have shifted significantly from existing grid cells
+        cursor.execute("SELECT latitude, longitude FROM grid_cells WHERE nearest_station_id = %s LIMIT 1", (station_id,))
+        cell = cursor.fetchone()
+        if cell:
+            dist = math.sqrt((cell[0] - s_lat)**2 + (cell[1] - s_lon)**2)
+            if dist < 0.05: # Center is close enough, keep it
+                return
+            else:
+                print(f"Station '{station_name}' relocated significantly. Recreating spatial grid...")
+                cursor.execute("DELETE FROM grid_cells WHERE nearest_station_id = %s", (station_id,))
+
+    print(f"Generating 3x3 spatial prediction grid for station '{station_name}' ({district} District)...")
+    step = 0.009
+    for dx in [-1, 0, 1]:
+        for dy in [-1, 0, 1]:
+            cell_lat = s_lat + dy * step
+            cell_lon = s_lon + dx * step
+            
+            # Geodesic distance in km (approximate)
+            dist = math.sqrt((dx * step * 111)**2 + (dy * step * 111)**2)
+            
+            # Elevation profile estimation (lower near coastal basins, higher inland)
+            base_el = 15.0
+            if district in ["Colombo", "Gampaha", "Matara", "Galle", "Kalutara"]:
+                base_el = 4.0
+            elif district == "Ratnapura":
+                base_el = 30.0
+            elif district in ["Kegalle", "Kandy", "Nuwara Eliya", "Badulla"]:
+                base_el = 100.0
+                
+            elevation = max(1.2, base_el + dist * 10.0 - abs(dx + dy) * 1.5)
+            slope = max(0.1, 0.4 + dist * 1.8)
+            
+            # Build bounding box polygon
+            half_step = step / 2.0
+            p1_lon, p1_lat = cell_lon - half_step, cell_lat - half_step
+            p2_lon, p2_lat = cell_lon + half_step, cell_lat - half_step
+            p3_lon, p3_lat = cell_lon + half_step, cell_lat + half_step
+            p4_lon, p4_lat = cell_lon - half_step, cell_lat + half_step
+            
+            wkt_poly = f"POLYGON(({p1_lon} {p1_lat}, {p2_lon} {p2_lat}, {p3_lon} {p3_lat}, {p4_lon} {p4_lat}, {p1_lon} {p1_lat}))"
+            
+            try:
+                if postgis_available:
+                    cursor.execute("""
+                        INSERT INTO grid_cells (district, latitude, longitude, elevation, slope, nearest_station_id, distance_to_river, geom)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, ST_GeomFromText(%s, 4326))
+                    """, (district, cell_lat, cell_lon, elevation, slope, station_id, dist, wkt_poly))
+                else:
+                    cursor.execute("""
+                        INSERT INTO grid_cells (district, latitude, longitude, elevation, slope, nearest_station_id, distance_to_river)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (district, cell_lat, cell_lon, elevation, slope, station_id, dist))
+            except Exception as e:
+                print(f"Error seeding grid cell near {station_name}: {e}")
+
+def seed_grid_cells(cursor, postgis_available):
+    """Generates and seeds a grid of cells covering all gauging stations in Sri Lanka."""
     cursor.execute("SELECT id, station_name, latitude, longitude, basin_name FROM gauging_stations")
     stations = cursor.fetchall()
     
-    district_map = {
-        "Kelani Ganga": "Colombo",
-        "Kalu Ganga": "Kalutara",
-        "Attanagalu Oya": "Gampaha",
-        "Gin Ganga": "Galle",
-        "Nilwala Ganga": "Matara",
-        "Maha Oya": "Kurunegala"
-    }
-    
+    print(f"Checking/seeding spatial prediction grids for {len(stations)} stations...")
     for station_id, name, s_lat, s_lon, basin in stations:
-        district = district_map.get(basin, "Colombo")
-        if name == "Rathnapura":
-            district = "Ratnapura"
-            
-        # Create a 2x2 grid centered around each gauging station to keep it efficient (~48 cells total)
-        step = 0.009
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                cell_lat = s_lat + dy * step
-                cell_lon = s_lon + dx * step
-                
-                # Distance to the gauging station in km
-                dist = math.sqrt((dx * step * 111)**2 + (dy * step * 111)**2)
-                
-                # Elevation logic: closer to rivers = lower elevation.
-                base_el = 15.0
-                if district in ["Colombo", "Gampaha", "Matara", "Galle"]:
-                    base_el = 4.0
-                elif district == "Ratnapura":
-                    base_el = 30.0
-                
-                elevation = max(1.2, base_el + dist * 10.0 - abs(dx + dy) * 1.5)
-                slope = max(0.1, 0.4 + dist * 1.8)
-                
-                # Create a polygon boundary
-                half_step = step / 2.0
-                p1_lon, p1_lat = cell_lon - half_step, cell_lat - half_step
-                p2_lon, p2_lat = cell_lon + half_step, cell_lat - half_step
-                p3_lon, p3_lat = cell_lon + half_step, cell_lat + half_step
-                p4_lon, p4_lat = cell_lon - half_step, cell_lat + half_step
-                
-                wkt_poly = f"POLYGON(({p1_lon} {p1_lat}, {p2_lon} {p2_lat}, {p3_lon} {p3_lat}, {p4_lon} {p4_lat}, {p1_lon} {p1_lat}))"
-                
-                try:
-                    if postgis_available:
-                        cursor.execute("""
-                            INSERT INTO grid_cells (district, latitude, longitude, elevation, slope, nearest_station_id, distance_to_river, geom)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, ST_GeomFromText(%s, 4326))
-                        """, (district, cell_lat, cell_lon, elevation, slope, station_id, dist, wkt_poly))
-                    else:
-                        cursor.execute("""
-                            INSERT INTO grid_cells (district, latitude, longitude, elevation, slope, nearest_station_id, distance_to_river)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        """, (district, cell_lat, cell_lon, elevation, slope, station_id, dist))
-                except Exception as e:
-                    print(f"Error seeding grid cell near {name}: {e}")
-                    
+        create_grid_cells_for_station(cursor, station_id, name, s_lat, s_lon, basin, postgis_available)
     print("Grid cells seeding complete.")
 
 if __name__ == "__main__":
     init_database()
+

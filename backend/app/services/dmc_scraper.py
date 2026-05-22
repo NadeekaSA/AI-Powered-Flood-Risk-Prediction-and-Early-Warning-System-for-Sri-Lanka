@@ -48,16 +48,9 @@ def scrape_dmc_data():
         
         parsed_stations = []
         
-        # Regex to parse rows like:
-        # | [Hanwella](https://...) | Kelani Ganga | Kelani Ganga | 8.1 | 🔺0.07 | 🟠 Minor Flood |
-        row_pattern = re.compile(
-            r'^\|\s*\[([^\]]+)\]\(([^|]+)\)\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|'
-        )
-        
-        # Let's check a more flexible pattern just in case there are no links, or different number of columns:
-        # Some rows might have 6 columns (Gauging Station, River, River Basin, Level, Rate-of-Rise, Alert)
+        # Capture name and URL if present, or plain text name if not
         flexible_pattern = re.compile(
-            r'^\|\s*(?:\[([^\]]+)\]\([^\)]+\)|([^|]+))\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|'
+            r'^\|\s*(?:\[([^\]]+)\]\(([^)]+)\)|([^|]+))\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|'
         )
 
         for line in lines[2:]: # skip header and separator lines
@@ -70,8 +63,8 @@ def scrape_dmc_data():
                 
             groups = match.groups()
             
-            # Station Name is either in group 0 (linked) or group 1 (plain text)
-            station_name = groups[0] if groups[0] else groups[1]
+            # Station Name is either in group 0 (linked) or group 2 (plain text)
+            station_name = groups[0] if groups[0] else groups[2]
             if not station_name:
                 continue
             
@@ -80,17 +73,29 @@ def scrape_dmc_data():
             if station_name.startswith("---") or station_name == "Gauging Station":
                 continue
                 
-            river_name = groups[2].strip()
-            basin_name = groups[3].strip()
-            current_level = clean_float(groups[4])
-            rate_of_rise = clean_float(groups[5])
+            url = groups[1].strip() if groups[1] else None
+            river_name = groups[3].strip()
+            basin_name = groups[4].strip()
+            current_level = clean_float(groups[5])
+            rate_of_rise = clean_float(groups[6])
             
             # If the rate of rise had a down-arrow (🔻 or negative sign), make it negative
-            raw_rise = groups[5]
-            if "🔻" in raw_rise or "-" in raw_rise:
+            raw_rise = groups[6]
+            if raw_rise and ("🔻" in raw_rise or "-" in raw_rise):
                 rate_of_rise = -abs(rate_of_rise)
                 
-            alert_status = clean_status(groups[6])
+            alert_status = clean_status(groups[7])
+            
+            # Parse coordinates from URL
+            lat, lon = 6.9, 79.9
+            if url:
+                coord_match = re.search(r'([\d\.\-]+),([\d\.\-]+)', url)
+                if coord_match:
+                    try:
+                        lat = float(coord_match.group(1))
+                        lon = float(coord_match.group(2))
+                    except ValueError:
+                        pass
             
             parsed_stations.append({
                 "name": station_name,
@@ -98,7 +103,9 @@ def scrape_dmc_data():
                 "basin": basin_name,
                 "level": current_level,
                 "rise": rate_of_rise,
-                "status": alert_status
+                "status": alert_status,
+                "latitude": lat,
+                "longitude": lon
             })
             
         if not parsed_stations:
@@ -111,29 +118,58 @@ def scrape_dmc_data():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        from app.db import create_grid_cells_for_station, is_postgis_available
+        postgis = is_postgis_available(cursor)
+        
         updated_count = 0
         for s in parsed_stations:
             try:
-                # Update current water levels, rate of rise, and alert status
-                cursor.execute("""
-                    UPDATE gauging_stations
-                    SET current_level = %s,
-                        rate_of_rise = %s,
-                        alert_status = %s,
-                        last_updated = CURRENT_TIMESTAMP
-                    WHERE station_name = %s
-                """, (s["level"], s["rise"], s["status"], s["name"]))
-                
-                # Check if it was updated, otherwise insert (if new station is found)
+                # Check if station exists
                 cursor.execute("SELECT id FROM gauging_stations WHERE station_name = %s", (s["name"],))
                 exists = cursor.fetchone()
-                if not exists:
-                    # Look up typical coordinates or assign default (e.g. Colombo coordinate)
+                
+                if exists:
+                    station_id = exists[0]
+                    # Update current water levels, rate of rise, alert status, and coordinates
                     cursor.execute("""
-                        INSERT INTO gauging_stations (station_name, river_name, basin_name, latitude, longitude, current_level, rate_of_rise, alert_status)
-                        VALUES (%s, %s, %s, 6.9, 79.9, %s, %s, %s)
-                    """, (s["name"], s["river"], s["basin"], s["level"], s["rise"], s["status"]))
+                        UPDATE gauging_stations
+                        SET current_level = %s,
+                            rate_of_rise = %s,
+                            alert_status = %s,
+                            latitude = %s,
+                            longitude = %s,
+                            river_name = %s,
+                            basin_name = %s,
+                            last_updated = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                    """, (s["level"], s["rise"], s["status"], s["latitude"], s["longitude"], s["river"], s["basin"], station_id))
                     
+                    if postgis:
+                        cursor.execute("""
+                            UPDATE gauging_stations
+                            SET geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+                            WHERE id = %s
+                        """, (s["longitude"], s["latitude"], station_id))
+                else:
+                    # Insert new station with correct coordinates
+                    if postgis:
+                        cursor.execute("""
+                            INSERT INTO gauging_stations (station_name, river_name, basin_name, latitude, longitude, current_level, rate_of_rise, alert_status, geom)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))
+                        """, (s["name"], s["river"], s["basin"], s["latitude"], s["longitude"], s["level"], s["rise"], s["status"], s["longitude"], s["latitude"]))
+                    else:
+                        cursor.execute("""
+                            INSERT INTO gauging_stations (station_name, river_name, basin_name, latitude, longitude, current_level, rate_of_rise, alert_status)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """, (s["name"], s["river"], s["basin"], s["latitude"], s["longitude"], s["level"], s["rise"], s["status"]))
+                    
+                    # Get the inserted station id
+                    cursor.execute("SELECT id FROM gauging_stations WHERE station_name = %s", (s["name"],))
+                    station_id = cursor.fetchone()[0]
+                
+                # Make sure 3x3 grid cells exist for this station!
+                create_grid_cells_for_station(cursor, station_id, s["name"], s["latitude"], s["longitude"], s["basin"], postgis)
+                
                 updated_count += 1
             except Exception as e:
                 print(f"Error saving station data for {s['name']}: {e}")

@@ -319,8 +319,9 @@ export default function MapView() {
               {/* River station markers */}
               {stations.map((station) => {
                 const sparklineData = generateSparklineData(station.current_level, station.rate_of_rise);
-                const isCritical = station.alert_status.toLowerCase().includes('major');
-                const riskColor = isCritical ? RISK_COLORS.Critical : station.alert_status.toLowerCase().includes('minor') ? RISK_COLORS.High : station.alert_status.toLowerCase().includes('alert') ? RISK_COLORS.Medium : RISK_COLORS.Low;
+                const alertStatus = station.alert_status || 'Normal';
+                const isCritical = alertStatus.toLowerCase().includes('major');
+                const riskColor = isCritical ? RISK_COLORS.Critical : alertStatus.toLowerCase().includes('minor') ? RISK_COLORS.High : alertStatus.toLowerCase().includes('alert') ? RISK_COLORS.Medium : RISK_COLORS.Low;
 
                 return (
                   <Marker
@@ -341,7 +342,7 @@ export default function MapView() {
                             className={`risk-badge risk-badge-${getStatusClass(station.alert_status)}`}
                             style={{ fontSize: '0.7rem', padding: '1px 6px' }}
                           >
-                            {station.alert_status}
+                            {station.alert_status || 'Normal'}
                           </span>
                         </div>
 
