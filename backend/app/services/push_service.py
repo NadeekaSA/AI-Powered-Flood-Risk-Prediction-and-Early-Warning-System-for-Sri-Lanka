@@ -29,14 +29,15 @@ def send_web_push(subscription_info, data_dict):
             subscription_info=subscription_info,
             data=payload,
             vapid_private_key=VAPID_PRIVATE_KEY,
-            vapid_claims=vapid_claims
+            vapid_claims=vapid_claims,
+            ttl=86400
         )
         print(f"Web Push sent successfully. Status code: {response.status_code}")
         return True
     except WebPushException as ex:
         print(f"Web Push Exception: {ex}")
         # If subscription has expired/gone, we should remove it from the DB
-        if ex.response and ex.response.status_code in [404, 410]:
+        if ex.response is not None and ex.response.status_code in [404, 410]:
             print(f"Subscription expired (Status {ex.response.status_code}). Removing from database...")
             remove_subscription_by_endpoint(subscription_info.get("endpoint"))
         return False

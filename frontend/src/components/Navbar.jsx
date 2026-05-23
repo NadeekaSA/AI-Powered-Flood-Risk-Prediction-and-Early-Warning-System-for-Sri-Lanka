@@ -32,16 +32,36 @@ export default function Navbar() {
     // Check if browser supports service worker and push manager
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       navigator.serviceWorker.ready.then((registration) => {
-        registration.pushManager.getSubscription().then((subscription) => {
+        registration.pushManager.getSubscription().then(async (subscription) => {
           setIsSubscribed(!!subscription);
+          
+          // Sync with backend if subscription exists to ensure database integrity (e.g. after database seeding/resets)
+          if (subscription) {
+            try {
+              const payload = subscription.toJSON();
+              await subscribeToAlerts({
+                endpoint: payload.endpoint,
+                p256dh: payload.keys?.p256dh,
+                auth: payload.keys?.auth
+              }, user?.id || null);
+              console.log('Push subscription successfully synchronized with database.');
+            } catch (err) {
+              console.error('Failed to sync existing push subscription with backend:', err);
+            }
+          }
         });
       });
     }
-  }, []);
+  }, [user]);
 
   const handleSubscribe = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       addToast('Push notifications are not supported by your browser.', 'High');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      addToast('Notification permission is blocked in browser settings. Please click the site settings icon in your browser address bar to allow notifications.', 'High');
       return;
     }
 
@@ -50,7 +70,11 @@ export default function Navbar() {
       // Request notification permission
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        addToast('Notification permission denied.', 'High');
+        if (permission === 'denied') {
+          addToast('Notification permission blocked. Please enable it in browser settings.', 'High');
+        } else {
+          addToast('Notification permission dismissed.', 'High');
+        }
         setSubscribing(false);
         return;
       }

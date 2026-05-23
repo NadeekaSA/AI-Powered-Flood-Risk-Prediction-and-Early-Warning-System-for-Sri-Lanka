@@ -291,6 +291,7 @@ def get_alerts():
                 "message": r[2],
                 "risk_level": r[3],
                 "district": r[4],
+                "is_active": True,
                 "created_at": r[5].isoformat()
             })
             
@@ -305,11 +306,11 @@ def get_alerts():
 @api.route("/alerts/subscribe", methods=["POST"])
 def subscribe():
     """Registers a client's Web Push Subscription."""
-    data = request.get_json()
+    data = request.get_json() or {}
     endpoint = data.get("endpoint")
     keys = data.get("keys", {})
-    p256dh = keys.get("p256dh")
-    auth = keys.get("auth")
+    p256dh = keys.get("p256dh") or data.get("p256dh")
+    auth = keys.get("auth") or data.get("auth")
     user_id = data.get("user_id") # optional, maps to registered user
     
     if not endpoint or not p256dh or not auth:

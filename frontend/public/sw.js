@@ -8,12 +8,15 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  // Pull url from nested data object if present, else fallback
+  const targetUrl = data.data?.url || data.url || '/';
+
   const options = {
     body: data.body,
     icon: '/favicon.svg',
     badge: '/favicon.svg',
     data: {
-      url: data.url || '/'
+      url: targetUrl
     },
     tag: 'flood-alert',
     vibrate: [200, 100, 200]
@@ -26,15 +29,24 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+  
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((clientList) => {
+      // If there is an open window of our origin, focus it
       for (const client of clientList) {
-        if (client.url === '/' && 'focus' in client) {
-          return client.focus();
+        try {
+          const clientUrl = new URL(client.url);
+          if (clientUrl.origin === self.location.origin && 'focus' in client) {
+            return client.focus();
+          }
+        } catch (e) {
+          console.error('Error parsing client URL:', e);
         }
       }
+      // Otherwise open a new window
       if (clients.openWindow) {
-        return clients.openWindow(event.notification.data.url || '/');
+        return clients.openWindow(targetUrl);
       }
     })
   );
