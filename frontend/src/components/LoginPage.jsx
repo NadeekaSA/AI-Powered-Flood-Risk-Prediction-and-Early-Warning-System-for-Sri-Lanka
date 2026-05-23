@@ -53,26 +53,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className="flex justify-center items-center w-full"
-      style={{
-        flex: 1,
-        minHeight: 'calc(100vh - 60px)',
-        padding: 'var(--sp-6)',
-        position: 'relative'
-      }}
-    >
-      <div
-        className="glass-card"
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          padding: 'var(--sp-8)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--sp-6)'
-        }}
-      >
+    <div className="login-page-container">
+      <div className="glass-card login-page-card">
         <div style={{ textAlign: 'center' }}>
           <h2 className="font-display font-bold" style={{ fontSize: '1.8rem', color: 'var(--clr-text-100)' }}>
             {isLogin ? 'Welcome Back' : 'Create Account'}

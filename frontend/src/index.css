@@ -758,3 +758,135 @@ input[type=range]::-webkit-slider-thumb:hover {
   border-radius: 3px;
   flex-shrink: 0;
 }
+
+/* === LOGIN / REGISTER PAGE === */
+.login-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-height: calc(100vh - 60px);
+  padding: var(--sp-6);
+  position: relative;
+}
+.login-page-card {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+
+/* =============================================
+   Sri Lanka Flood Risk — Mobile Responsiveness Patches
+   ============================================= */
+
+@media (max-width: 768px) {
+  /* 1. App Layout Stacking */
+  .app-main {
+    flex-direction: column-reverse !important;
+  }
+  
+  .sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 380px !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border-subtle) !important;
+  }
+  
+  .map-container {
+    height: calc(100% - 380px) !important;
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  .map-legend {
+    bottom: var(--sp-3) !important;
+    left: var(--sp-3) !important;
+    padding: var(--sp-2) var(--sp-3) !important;
+    min-width: 130px !important;
+  }
+  
+  /* 2. Navbar Compact Styles */
+  .navbar {
+    padding: 0 var(--sp-3) !important;
+    gap: var(--sp-2) !important;
+  }
+  
+  .navbar-live {
+    display: none !important; /* Hide live text label on mobile to save space */
+  }
+  
+  .navbar-brand {
+    font-size: 1rem !important;
+  }
+  
+  .nav-btn-text,
+  .nav-user-welcome {
+    display: none !important; /* Hide text, keep emoji icons for navigation buttons */
+  }
+  
+  .navbar-nav {
+    gap: var(--sp-1) !important;
+  }
+  
+  .navbar-nav .btn {
+    padding: var(--sp-2) var(--sp-3) !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* 3. Admin Layout Stacking */
+  .admin-layout {
+    flex-direction: column !important;
+  }
+  
+  .admin-sidebar {
+    width: 100% !important;
+    height: auto !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    padding: var(--sp-2) var(--sp-4) !important;
+    gap: var(--sp-2) !important;
+    scrollbar-width: none !important; /* Hide scrollbar for tabs look */
+  }
+  
+  .admin-sidebar::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .admin-sidebar-header {
+    display: none !important; /* Hide Console Modules header on mobile tab bar */
+  }
+  
+  .admin-nav-item {
+    white-space: nowrap !important;
+    padding: var(--sp-2) var(--sp-3) !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .admin-content {
+    padding: var(--sp-4) !important;
+    gap: var(--sp-4) !important;
+  }
+  
+  /* 4. Table Responsiveness */
+  .table-responsive {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 5. Login Page Responsive Padding */
+  .login-page-container {
+    padding: var(--sp-3) !important;
+  }
+  .login-page-card {
+    padding: var(--sp-5) !important;
+    gap: var(--sp-4) !important;
+  }
+}

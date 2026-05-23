@@ -133,7 +133,7 @@ export default function Navbar() {
           className={`nav-btn ${location.pathname === '/' ? 'active' : ''}`}
           onClick={() => navigate('/')}
         >
-          📍 Map View
+          📍 <span className="nav-btn-text">Map View</span>
         </button>
 
         {user?.role === 'admin' && (
@@ -141,7 +141,7 @@ export default function Navbar() {
             className={`nav-btn ${location.pathname === '/admin' ? 'active' : ''}`}
             onClick={() => navigate('/admin')}
           >
-            ⚙️ Admin Panel
+            ⚙️ <span className="nav-btn-text">Admin Panel</span>
           </button>
         )}
 
@@ -151,21 +151,21 @@ export default function Navbar() {
           disabled={subscribing || isSubscribed}
           style={{ marginRight: '10px' }}
         >
-          {subscribing ? '⌛ Connecting...' : isSubscribed ? '🔔 Subscribed' : '🔔 Get Alerts'}
+          {subscribing ? '⌛' : '🔔'} <span className="nav-btn-text">{subscribing ? 'Connecting...' : isSubscribed ? 'Subscribed' : 'Get Alerts'}</span>
         </button>
 
         {user ? (
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted" style={{ marginRight: '5px' }}>
-              Hi, <strong style={{ color: 'var(--clr-text-100)' }}>{user.username}</strong>
+              <span className="nav-user-welcome">Hi, </span><strong style={{ color: 'var(--clr-text-100)' }}>{user.username}</strong>
             </span>
             <button className="btn btn-secondary btn-sm" onClick={handleLogout}>
-              Logout
+              🚪 <span className="nav-btn-text">Logout</span>
             </button>
           </div>
         ) : (
           <button className="btn btn-primary btn-sm" onClick={() => navigate('/login')}>
-            Login
+            🔑 <span className="nav-btn-text">Login</span>
           </button>
         )}
       </div>

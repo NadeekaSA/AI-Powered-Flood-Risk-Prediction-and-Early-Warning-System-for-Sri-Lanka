@@ -211,7 +211,7 @@ export default function AdminDashboard() {
       {/* Admin Sidebar Navigation */}
       <aside className="admin-sidebar">
         <h3
-          className="font-display font-bold text-sm text-muted"
+          className="font-display font-bold text-sm text-muted admin-sidebar-header"
           style={{ padding: 'var(--sp-2) var(--sp-4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}
         >
           Console Modules
@@ -563,7 +563,7 @@ export default function AdminDashboard() {
                   </button>
                 </div>
 
-                <div className="glass-card overflow-hidden">
+                <div className="glass-card table-responsive">
                   <table className="data-table">
                     <thead>
                       <tr>
