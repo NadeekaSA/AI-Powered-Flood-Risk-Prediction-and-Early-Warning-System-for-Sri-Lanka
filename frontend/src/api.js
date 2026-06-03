@@ -14,8 +14,8 @@ api.interceptors.request.use((config) => {
 // Auth
 export const login = (username, password) =>
   api.post('/auth/login', { username, password });
-export const register = (username, password, role) =>
-  api.post('/auth/register', { username, password, role });
+export const register = (username, password, role, district = null, nearestStationId = null) =>
+  api.post('/auth/register', { username, password, role, district, nearest_station_id: nearestStationId });
 
 // Hydrology
 export const getRiverLevels = (refresh = false) =>

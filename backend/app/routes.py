@@ -3,7 +3,7 @@ import datetime
 import hashlib
 import jwt
 from flask import Blueprint, request, jsonify, make_response
-from app.db import get_db_connection
+from app.db import get_db_connection, get_station_district
 from app.services.ml_service import run_predictions
 from app.services.dmc_scraper import scrape_dmc_data
 from app.services.push_service import broadcast_flood_alert
@@ -85,6 +85,9 @@ def register():
     password = data.get("password")
     role = data.get("role", "public") # defaults to public, can be admin
     
+    district = data.get("district")
+    nearest_station_id = data.get("nearest_station_id")
+    
     if role not in ["public", "admin"]:
         role = "public"
         
@@ -105,9 +108,9 @@ def register():
         # Store user (combine hash and salt using a colon in password_hash field)
         stored_hash = f"{pwd_hash}:{salt}"
         cursor.execute("""
-            INSERT INTO users (username, password_hash, role)
-            VALUES (%s, %s, %s)
-        """, (username, stored_hash, role))
+            INSERT INTO users (username, password_hash, role, district, nearest_station_id)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (username, stored_hash, role, district, nearest_station_id))
         conn.commit()
         
         return jsonify({"message": f"User registered successfully as '{role}'!"}), 201
@@ -132,12 +135,12 @@ def login():
     cursor = conn.cursor()
     
     try:
-        cursor.execute("SELECT id, password_hash, role FROM users WHERE username = %s", (username,))
+        cursor.execute("SELECT id, password_hash, role, district, nearest_station_id FROM users WHERE username = %s", (username,))
         user = cursor.fetchone()
         if not user:
             return jsonify({"message": "Invalid username or password!"}), 401
             
-        user_id, stored_hash, role = user
+        user_id, stored_hash, role, district, nearest_station_id = user
         pwd_hash, salt = stored_hash.split(":")
         
         if verify_password(pwd_hash, salt, password):
@@ -151,7 +154,9 @@ def login():
             return jsonify({
                 "token": token,
                 "role": role,
-                "username": username
+                "username": username,
+                "district": district,
+                "nearest_station_id": nearest_station_id
             }), 200
         else:
             return jsonify({"message": "Invalid username or password!"}), 401
@@ -198,6 +203,7 @@ def get_river_levels():
                 "current_level": r[6],
                 "rate_of_rise": r[7],
                 "alert_status": r[8],
+                "district": get_station_district(r[1], r[3]),
                 "last_updated": r[9].isoformat() if r[9] else None
             })
             

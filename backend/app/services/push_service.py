@@ -84,7 +84,7 @@ def broadcast_flood_alert(title, message, risk_level, district=None):
     # 2. Fetch all active subscriptions
     subscriptions = []
     try:
-        cursor.execute("SELECT endpoint, p256dh, auth FROM push_subscriptions")
+        cursor.execute("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id IS NOT NULL")
         rows = cursor.fetchall()
         for r in rows:
             subscriptions.append({

@@ -80,6 +80,8 @@ def init_database():
                 username VARCHAR(100) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 role VARCHAR(20) DEFAULT 'public' CHECK (role IN ('public', 'admin')),
+                district VARCHAR(50),
+                nearest_station_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -168,6 +170,14 @@ def init_database():
             );
         """)
         
+        # Upgrade existing users table to add new columns if they do not exist
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS district VARCHAR(50);")
+            cursor.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS nearest_station_id INTEGER;")
+            print("Users table check/migration run completed.")
+        except Exception as e:
+            print("Notice: users table columns check/upgrade encountered error:", e)
+
         conn.commit()
         print("Tables created successfully.")
         
