@@ -2,6 +2,24 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/\-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      window
+        .atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.error("Failed to decode token:", e);
+    return null;
+  }
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
@@ -9,15 +27,25 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('fw_token');
     const role = localStorage.getItem('fw_role');
     const username = localStorage.getItem('fw_username');
-    const id = localStorage.getItem('fw_id');
-    if (token && role) setUser({ token, role, username, id: id ? parseInt(id, 10) : null });
+    let id = localStorage.getItem('fw_id');
+    
+    if (token && role) {
+      if (!id) {
+        const decoded = decodeToken(token);
+        if (decoded && decoded.user_id) {
+          id = decoded.user_id;
+          localStorage.setItem('fw_id', id);
+        }
+      }
+      setUser({ token, role, username, id: id ? parseInt(id, 10) : null });
+    }
   }, []);
 
   const loginUser = (token, role, username, id) => {
     localStorage.setItem('fw_token', token);
     localStorage.setItem('fw_role', role);
     localStorage.setItem('fw_username', username);
-    if (id) localStorage.setItem('fw_id', id);
+    if (id) localStorage.setItem('fw_id', id.toString());
     setUser({ token, role, username, id: id ? parseInt(id, 10) : null });
   };
 
