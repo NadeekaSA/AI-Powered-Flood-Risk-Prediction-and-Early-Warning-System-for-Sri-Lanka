@@ -110,10 +110,12 @@ def register():
         cursor.execute("""
             INSERT INTO users (username, password_hash, role, district, nearest_station_id)
             VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
         """, (username, stored_hash, role, district, nearest_station_id))
+        user_id = cursor.fetchone()[0]
         conn.commit()
         
-        return jsonify({"message": f"User registered successfully as '{role}'!"}), 201
+        return jsonify({"message": f"User registered successfully as '{role}'!", "user_id": user_id}), 201
     except Exception as e:
         print("Registration error:", e)
         conn.rollback()

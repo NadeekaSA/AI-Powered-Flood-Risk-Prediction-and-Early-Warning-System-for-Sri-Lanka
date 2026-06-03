@@ -145,14 +145,6 @@ export default function Navbar() {
           </button>
         )}
 
-        <button
-          className={`btn ${isSubscribed ? 'btn-secondary' : 'btn-primary'} btn-sm`}
-          onClick={handleSubscribe}
-          disabled={subscribing || isSubscribed}
-          style={{ marginRight: '10px' }}
-        >
-          {subscribing ? '⌛' : '🔔'} <span className="nav-btn-text">{subscribing ? 'Connecting...' : isSubscribed ? 'Subscribed' : 'Get Alerts'}</span>
-        </button>
 
         {user ? (
           <div className="flex items-center gap-3">
