@@ -777,7 +777,29 @@ input[type=range]::-webkit-slider-thumb:hover {
   display: flex;
   flex-direction: column;
   gap: var(--sp-6);
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1), padding 0.35s ease;
 }
+.login-page-card.register-mode {
+  max-width: 720px;
+}
+.login-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-4);
+}
+.form-submit-btn {
+  grid-column: span 1;
+}
+@media (min-width: 600px) {
+  .login-form-grid.register-mode {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-5);
+  }
+  .login-form-grid.register-mode .form-submit-btn {
+    grid-column: span 2;
+  }
+}
+
 
 /* =============================================
    Sri Lanka Flood Risk — Mobile Responsiveness Patches

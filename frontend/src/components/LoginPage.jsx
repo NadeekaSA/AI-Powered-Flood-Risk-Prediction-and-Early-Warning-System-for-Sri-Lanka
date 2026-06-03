@@ -179,7 +179,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-page-container">
-      <div className="glass-card login-page-card">
+      <div className={`glass-card login-page-card ${!isLogin ? 'register-mode' : ''}`}>
         <div style={{ textAlign: 'center' }}>
           <h2 className="font-display font-bold" style={{ fontSize: '1.8rem', color: 'var(--clr-text-100)' }}>
             {isLogin ? 'Welcome Back' : 'Create Account'}
@@ -191,7 +191,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className={`login-form-grid ${!isLogin ? 'register-mode' : ''}`}>
           <div className="form-group">
             <label className="form-label">Username</label>
             <input
@@ -294,7 +294,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="btn btn-primary w-full justify-center"
+            className="btn btn-primary w-full justify-center form-submit-btn"
             style={{ marginTop: 'var(--sp-2)' }}
             disabled={loading}
           >
