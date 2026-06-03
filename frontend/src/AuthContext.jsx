@@ -9,20 +9,23 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem('fw_token');
     const role = localStorage.getItem('fw_role');
     const username = localStorage.getItem('fw_username');
-    if (token && role) setUser({ token, role, username });
+    const id = localStorage.getItem('fw_id');
+    if (token && role) setUser({ token, role, username, id: id ? parseInt(id, 10) : null });
   }, []);
 
-  const loginUser = (token, role, username) => {
+  const loginUser = (token, role, username, id) => {
     localStorage.setItem('fw_token', token);
     localStorage.setItem('fw_role', role);
     localStorage.setItem('fw_username', username);
-    setUser({ token, role, username });
+    if (id) localStorage.setItem('fw_id', id);
+    setUser({ token, role, username, id: id ? parseInt(id, 10) : null });
   };
 
   const logoutUser = () => {
     localStorage.removeItem('fw_token');
     localStorage.removeItem('fw_role');
     localStorage.removeItem('fw_username');
+    localStorage.removeItem('fw_id');
     setUser(null);
   };
 

@@ -124,8 +124,8 @@ export default function LoginPage() {
       if (isLogin) {
         // Login API Call
         const res = await login(username, password);
-        const { token, role: userRole, username: userName } = res.data;
-        loginUser(token, userRole, userName);
+        const { token, role: userRole, username: userName, id: userId } = res.data;
+        loginUser(token, userRole, userName, userId);
         addToast(`Welcome back, ${userName}!`, 'Low');
         
         if (userRole === 'admin') {

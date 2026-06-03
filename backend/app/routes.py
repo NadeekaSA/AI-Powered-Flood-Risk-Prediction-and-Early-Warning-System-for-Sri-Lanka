@@ -157,6 +157,7 @@ def login():
                 "token": token,
                 "role": role,
                 "username": username,
+                "id": user_id,
                 "district": district,
                 "nearest_station_id": nearest_station_id
             }), 200
