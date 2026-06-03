@@ -322,6 +322,18 @@ def subscribe():
     auth = keys.get("auth") or data.get("auth")
     user_id = data.get("user_id") # optional, maps to registered user
     
+    # Securely extract user_id from JWT token if available in Authorization headers
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            token_user_id = decoded.get("user_id")
+            if token_user_id:
+                user_id = token_user_id
+        except Exception as jwt_err:
+            print("JWT token decoding failed during subscription:", jwt_err)
+    
     if not endpoint or not p256dh or not auth:
         return jsonify({"message": "Invalid subscription payload."}), 400
         
