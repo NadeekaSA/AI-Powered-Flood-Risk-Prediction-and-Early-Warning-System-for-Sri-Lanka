@@ -81,10 +81,10 @@ def broadcast_flood_alert(title, message, risk_level, district=None):
         print(f"Error logging alert: {e}")
         conn.rollback()
         
-    # 2. Fetch all active subscriptions
+    # 2. Fetch ALL active subscriptions (backend JWT extraction ensures only authenticated users subscribe)
     subscriptions = []
     try:
-        cursor.execute("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id IS NOT NULL")
+        cursor.execute("SELECT endpoint, p256dh, auth, user_id FROM push_subscriptions")
         rows = cursor.fetchall()
         for r in rows:
             subscriptions.append({
@@ -94,6 +94,7 @@ def broadcast_flood_alert(title, message, risk_level, district=None):
                     "auth": r[2]
                 }
             })
+        print(f"Found {len(rows)} total push subscription(s) (user_id linked: {sum(1 for r in rows if r[3] is not None)})")
     except Exception as e:
         print(f"Error fetching push subscriptions: {e}")
     finally:

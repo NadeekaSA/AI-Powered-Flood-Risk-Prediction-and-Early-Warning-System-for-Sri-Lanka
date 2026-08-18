@@ -299,31 +299,31 @@ export default function AdminDashboard() {
                         Random Forest Classifier (Risk Level)
                       </h4>
                       <p className="text-xs text-muted" style={{ marginBottom: 'var(--sp-4)' }}>
-                        Predicts flood risk categories (Low, Medium, High, Critical) using a 15-tree ensemble model.
+                        Predicts flood risk categories (Low, Medium, High, Critical) using a 100-tree optimized ensemble model.
                       </p>
                       <div className="flex justify-between text-sm" style={{ marginBottom: 'var(--sp-2)' }}>
                         <span>Validation Accuracy:</span>
-                        <strong style={{ color: 'var(--risk-low)' }}>88.12%</strong>
+                        <strong style={{ color: 'var(--risk-low)' }}>93.17%</strong>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>F1-Score (Weighted):</span>
-                        <strong>0.879</strong>
+                        <strong>0.93</strong>
                       </div>
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-primary" style={{ marginBottom: 'var(--sp-2)' }}>
-                        Linear Regression Model (Inundation Depth)
+                        Random Forest Regressor (Inundation Depth)
                       </h4>
                       <p className="text-xs text-muted" style={{ marginBottom: 'var(--sp-4)' }}>
-                        Forecasts numerical maximum inundation depth (m) using stochastic gradient descent.
+                        Forecasts numerical maximum inundation depth (m) using a 150-tree optimized ensemble model.
                       </p>
                       <div className="flex justify-between text-sm" style={{ marginBottom: 'var(--sp-2)' }}>
                         <span>Root Mean Square Error:</span>
-                        <strong style={{ color: 'var(--risk-low)' }}>0.1427 m</strong>
+                        <strong style={{ color: 'var(--risk-low)' }}>0.8263 m</strong>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span>Mean Absolute Error:</span>
-                        <strong>0.0984 m</strong>
+                        <strong>0.4932 m</strong>
                       </div>
                     </div>
                   </div>

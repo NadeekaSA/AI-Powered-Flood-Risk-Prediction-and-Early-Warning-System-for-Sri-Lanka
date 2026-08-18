@@ -24,35 +24,74 @@ export default function Navbar() {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
 
-  useEffect(() => {
-    // Check if browser supports service worker and push manager
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.pushManager.getSubscription().then(async (subscription) => {
-          setIsSubscribed(!!subscription);
-          
-          // Sync with backend if subscription exists to ensure database integrity (e.g. after database seeding/resets)
-          if (subscription) {
-            try {
-              const payload = subscription.toJSON();
-              await subscribeToAlerts({
-                endpoint: payload.endpoint,
-                p256dh: payload.keys?.p256dh,
-                auth: payload.keys?.auth
-              }, user?.id || null);
-              console.log('Push subscription successfully synchronized with database.');
-            } catch (err) {
-              console.error('Failed to sync existing push subscription with backend:', err);
-            }
-          }
-        });
+  // Re-subscribe with fresh keys (used when existing sub is stale/expired)
+  const forceResubscribe = async (registration) => {
+    try {
+      const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+      if (!publicVapidKey) return;
+
+      // Unsubscribe old stale subscription from browser
+      const oldSub = await registration.pushManager.getSubscription();
+      if (oldSub) await oldSub.unsubscribe();
+
+      // Create a fresh subscription
+      const freshSub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
       });
+
+      const payload = freshSub.toJSON();
+      await subscribeToAlerts({
+        endpoint: payload.endpoint,
+        p256dh: payload.keys?.p256dh,
+        auth: payload.keys?.auth,
+      });
+      setIsSubscribed(true);
+      console.log('Push subscription refreshed and synced to database.');
+    } catch (err) {
+      console.error('Failed to force re-subscribe:', err);
+      setIsSubscribed(false);
     }
+  };
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+
+    navigator.serviceWorker.ready.then(async (registration) => {
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        setIsSubscribed(false);
+        return;
+      }
+
+      // Subscription exists locally — sync with backend
+      try {
+        const payload = subscription.toJSON();
+        const response = await subscribeToAlerts({
+          endpoint: payload.endpoint,
+          p256dh: payload.keys?.p256dh,
+          auth: payload.keys?.auth,
+        });
+        setIsSubscribed(true);
+        console.log('Push subscription synced with backend.');
+      } catch (err) {
+        const status = err.response?.status;
+        if (status === 410 || status === 404) {
+          // Subscription expired on push service — force fresh subscribe
+          console.warn('Push subscription expired (410). Re-subscribing...');
+          await forceResubscribe(registration);
+        } else {
+          console.error('Failed to sync push subscription:', err);
+          setIsSubscribed(false);
+        }
+      }
+    });
   }, [user]);
+
 
   const handleSubscribe = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
@@ -93,13 +132,13 @@ export default function Navbar() {
 
       const subscription = await registration.pushManager.subscribe(subscriptionOptions);
 
-      // Send to backend
+      // Send to backend — user_id is extracted from the JWT Authorization header server-side
       const payload = subscription.toJSON();
       await subscribeToAlerts({
         endpoint: payload.endpoint,
         p256dh: payload.keys?.p256dh,
         auth: payload.keys?.auth
-      }, user?.id || null);
+      });
 
       setIsSubscribed(true);
       addToast('Successfully subscribed to early warning flood alerts!', 'Low');
@@ -148,6 +187,22 @@ export default function Navbar() {
 
         {user ? (
           <div className="flex items-center gap-3">
+            {!isSubscribed && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={handleSubscribe}
+                disabled={subscribing}
+                title="Subscribe to flood alerts"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+              >
+                {subscribing ? '⏳' : '🔔'} <span className="nav-btn-text">{subscribing ? 'Subscribing...' : 'Get Alerts'}</span>
+              </button>
+            )}
+            {isSubscribed && (
+              <span style={{ fontSize: '13px', color: 'var(--clr-success, #4ade80)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                🔔 <span className="nav-btn-text">Alerts On</span>
+              </span>
+            )}
             <span className="text-sm text-muted" style={{ marginRight: '5px' }}>
               <span className="nav-user-welcome">Hi, </span><strong style={{ color: 'var(--clr-text-100)' }}>{user.username}</strong>
             </span>

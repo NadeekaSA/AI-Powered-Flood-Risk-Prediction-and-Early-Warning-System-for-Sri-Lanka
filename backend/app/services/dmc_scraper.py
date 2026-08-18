@@ -2,7 +2,7 @@ import re
 import requests
 from app.db import get_db_connection
 
-DMC_README_URL = "https://raw.githubusercontent.com/nuuuwan/lk_dmc_vis/main/README.md"
+DMC_README_URL = "https://raw.githubusercontent.com/nuuuwan/lk_irrigation/main/README.md"
 
 def clean_float(value_str):
     """Cleans a string and converts it to float, stripping emojis and signs."""
@@ -37,20 +37,18 @@ def scrape_dmc_data():
         content = response.text
         
         # Locate the Summary Table in Markdown
-        # Find the line with column headers
-        table_start_idx = content.find("| Gauging Station |")
+        table_start_idx = content.find("| Measured At |")
         if table_start_idx == -1:
             print("Error: Could not locate Gauging Station table in README.")
             return False
             
-        # Extract lines starting from the header
         lines = content[table_start_idx:].split("\n")
         
         parsed_stations = []
         
-        # Capture name and URL if present, or plain text name if not
+        # New pattern: | Measured At | Station (River Basin) | Level (m) | Alert Level | Rate-of-Rise (m/hr) | Rising Alert |
         flexible_pattern = re.compile(
-            r'^\|\s*(?:\[([^\]]+)\]\(([^)]+)\)|([^|]+))\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|'
+            r'^\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]+)\|\s*([^|]*)\|'
         )
 
         for line in lines[2:]: # skip header and separator lines
@@ -63,39 +61,34 @@ def scrape_dmc_data():
                 
             groups = match.groups()
             
-            # Station Name is either in group 0 (linked) or group 2 (plain text)
-            station_name = groups[0] if groups[0] else groups[2]
-            if not station_name:
-                continue
+            measured_at = groups[0].strip()
+            station_basin_str = groups[1].strip()
+            level_str = groups[2].strip()
+            alert_str = groups[3].strip()
+            rise_str = groups[4].strip()
             
-            station_name = station_name.strip()
             # Skip if it is part of the header separator or footer
-            if station_name.startswith("---") or station_name == "Gauging Station":
+            if station_basin_str.startswith("---") or station_basin_str == "Station (River Basin)":
                 continue
-                
-            url = groups[1].strip() if groups[1] else None
-            river_name = groups[3].strip()
-            basin_name = groups[4].strip()
-            current_level = clean_float(groups[5])
-            rate_of_rise = clean_float(groups[6])
             
-            # If the rate of rise had a down-arrow (🔻 or negative sign), make it negative
-            raw_rise = groups[6]
-            if raw_rise and ("🔻" in raw_rise or "-" in raw_rise):
-                rate_of_rise = -abs(rate_of_rise)
-                
-            alert_status = clean_status(groups[7])
+            # Parse station and basin
+            # Format: "Holombuwa (Kelani Ganga)"
+            station_name = station_basin_str
+            basin_name = "Unknown"
+            basin_match = re.search(r'^(.*?)\s*\((.*?)\)$', station_basin_str)
+            if basin_match:
+                station_name = basin_match.group(1).strip()
+                basin_name = basin_match.group(2).strip()
             
-            # Parse coordinates from URL
+            river_name = basin_name # Fallback
+            current_level = clean_float(level_str)
+            rate_of_rise = clean_float(rise_str)
+            alert_status = clean_status(alert_str)
+            
+            # Coordinates are no longer provided in the table, keep existing ones.
+            # We can use a dummy lat/lon for new inserts or query the DB for existing ones.
+            # For new inserts we can use the default, but we should not overwrite existing coordinates.
             lat, lon = 6.9, 79.9
-            if url:
-                coord_match = re.search(r'([\d\.\-]+),([\d\.\-]+)', url)
-                if coord_match:
-                    try:
-                        lat = float(coord_match.group(1))
-                        lon = float(coord_match.group(2))
-                    except ValueError:
-                        pass
             
             parsed_stations.append({
                 "name": station_name,
@@ -125,31 +118,29 @@ def scrape_dmc_data():
         for s in parsed_stations:
             try:
                 # Check if station exists
-                cursor.execute("SELECT id FROM gauging_stations WHERE station_name = %s", (s["name"],))
+                cursor.execute("SELECT id, latitude, longitude FROM gauging_stations WHERE station_name = %s", (s["name"],))
                 exists = cursor.fetchone()
                 
                 if exists:
                     station_id = exists[0]
-                    # Update current water levels, rate of rise, alert status, and coordinates
+                    existing_lat = exists[1]
+                    existing_lon = exists[2]
+                    
+                    # Update current water levels, rate of rise, alert status, leaving coordinates intact
                     cursor.execute("""
                         UPDATE gauging_stations
                         SET current_level = %s,
                             rate_of_rise = %s,
                             alert_status = %s,
-                            latitude = %s,
-                            longitude = %s,
                             river_name = %s,
                             basin_name = %s,
                             last_updated = CURRENT_TIMESTAMP
                         WHERE id = %s
-                    """, (s["level"], s["rise"], s["status"], s["latitude"], s["longitude"], s["river"], s["basin"], station_id))
+                    """, (s["level"], s["rise"], s["status"], s["river"], s["basin"], station_id))
                     
-                    if postgis:
-                        cursor.execute("""
-                            UPDATE gauging_stations
-                            SET geom = ST_SetSRID(ST_MakePoint(%s, %s), 4326)
-                            WHERE id = %s
-                        """, (s["longitude"], s["latitude"], station_id))
+                    # Override the default parsed lat/lon with existing so grid cells don't get misplaced
+                    s["latitude"] = existing_lat
+                    s["longitude"] = existing_lon
                 else:
                     # Insert new station with correct coordinates
                     if postgis:

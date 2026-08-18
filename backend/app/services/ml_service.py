@@ -1,29 +1,30 @@
 import os
 import pickle
 import math
+import pandas as pd
 from app.db import get_db_connection
 
 # Resolve paths for the trained models
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RF_MODEL_PATH = os.path.join(BASE_DIR, "ml", "trained_models", "random_forest.pkl")
-LR_MODEL_PATH = os.path.join(BASE_DIR, "ml", "trained_models", "linear_reg.pkl")
+REG_MODEL_PATH = os.path.join(BASE_DIR, "ml", "trained_models", "random_forest_reg.pkl")
 
 # Cached model holders
 _rf_model = None
-_lr_model = None
+_reg_model = None
 
 def load_models():
     """Loads the trained pickle models from disk."""
-    global _rf_model, _lr_model
+    global _rf_model, _reg_model
     if _rf_model is None:
         print(f"Loading Random Forest Classifier from: {RF_MODEL_PATH}")
         with open(RF_MODEL_PATH, "rb") as f:
             _rf_model = pickle.load(f)
-    if _lr_model is None:
-        print(f"Loading Linear Regression Model from: {LR_MODEL_PATH}")
-        with open(LR_MODEL_PATH, "rb") as f:
-            _lr_model = pickle.load(f)
-    return _rf_model, _lr_model
+    if _reg_model is None:
+        print(f"Loading Random Forest Regressor from: {REG_MODEL_PATH}")
+        with open(REG_MODEL_PATH, "rb") as f:
+            _reg_model = pickle.load(f)
+    return _rf_model, _reg_model
 
 def run_predictions(simulated_rainfall_data=None):
     """
@@ -99,13 +100,24 @@ def run_predictions(simulated_rainfall_data=None):
         ]
         
         # Predict class probabilities
-        probs = rf.predict_row_prob(feature_vector)
+        features_df = pd.DataFrame([feature_vector], columns=[
+            'daily_rainfall_mm', '3_day_cumulative_rain', 'rate_of_rise', 
+            'elevation_m', 'slope_degrees', 'distance_to_river_km'
+        ])
+        
+        probs_array = rf.predict_proba(features_df)[0]
+        probs = {int(c): float(p) for c, p in zip(rf.classes_, probs_array)}
+        # Ensure all classes 0, 1, 2, 3 are represented
+        for c in [0, 1, 2, 3]:
+            if c not in probs:
+                probs[c] = 0.0
+                
         pred_class = max(probs, key=probs.get)
         pred_risk_level = risk_names[pred_class]
         pred_prob = probs[pred_class]
         
-        # Predict flood depth (Linear Regression)
-        pred_depth = lr.predict([feature_vector])[0]
+        # Predict flood depth (Random Forest Regressor)
+        pred_depth = lr.predict(features_df)[0]
         # Cap depth based on predicted risk level for physical consistency
         if pred_class == 0: # Low risk
             pred_depth = 0.0
