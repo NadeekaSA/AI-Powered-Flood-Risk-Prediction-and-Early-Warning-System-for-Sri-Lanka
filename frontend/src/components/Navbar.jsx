@@ -125,6 +125,12 @@ export default function Navbar() {
         throw new Error('VAPID public key is missing in environment configuration.');
       }
 
+      // Clear any existing subscription to avoid VAPID key mismatch/push service conflicts
+      const oldSub = await registration.pushManager.getSubscription();
+      if (oldSub) {
+        await oldSub.unsubscribe();
+      }
+
       const subscriptionOptions = {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicVapidKey),
