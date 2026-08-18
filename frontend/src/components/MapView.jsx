@@ -315,6 +315,44 @@ export default function MapView() {
                             <span>{cell.distance_to_river.toFixed(2)} km</span>
                           </div>
                         </div>
+                        
+                        {/* Historical Comparison Layer */}
+                        <div style={{ 
+                          marginTop: '8px', 
+                          paddingTop: '6px', 
+                          borderTop: '1px solid var(--border-subtle)',
+                        }}>
+                          <p className="text-xs text-muted" style={{ marginBottom: '4px', fontWeight: 600 }}>
+                            📊 Historical Comparison (Model Insights):
+                          </p>
+                          <div style={{ 
+                            background: 'rgba(255, 255, 255, 0.03)', 
+                            padding: '6px', 
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255, 255, 255, 0.05)'
+                          }}>
+                            <div className="flex justify-between" style={{ fontSize: '10px', color: 'var(--clr-text-300)' }}>
+                              <span>Past Safe Avg Rain:</span>
+                              <strong>12.9 mm</strong>
+                            </div>
+                            <div className="flex justify-between" style={{ fontSize: '10px', color: 'var(--clr-text-300)' }}>
+                              <span>Past Flood Avg Rain:</span>
+                              <strong style={{ color: 'var(--risk-high)' }}>93.3 mm</strong>
+                            </div>
+                            <div className="flex justify-between" style={{ fontSize: '10px', color: 'var(--clr-text-300)' }}>
+                              <span>Past Flood Avg Depth:</span>
+                              <strong>2.26 m</strong>
+                            </div>
+                            <div style={{ 
+                              fontSize: '9px', 
+                              color: 'var(--clr-text-400)', 
+                              marginTop: '4px', 
+                              lineHeight: '1.2' 
+                            }}>
+                              * Current rain of <strong>{cell.daily_rainfall.toFixed(1)} mm</strong> is evaluated against these historical markers by the RF model.
+                            </div>
+                          </div>
+                        </div>
 
                         <div style={{ fontSize: '0.65rem', color: 'var(--clr-text-400)', marginTop: '8px', textAlign: 'right' }}>
                           Run: {new Date(cell.run_timestamp).toLocaleTimeString()}
