@@ -71,6 +71,15 @@ export default function MapView() {
   const [activeTab, setActiveTab] = useState('rivers'); // 'rivers' or 'alerts'
   const [searchQuery, setSearchQuery] = useState('');
   const [focusCoords, setFocusCoords] = useState(null);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setTheme(localStorage.getItem('theme') || 'dark');
+    };
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
 
   // Fetch initial data
   const fetchData = async (syncDMC = false) => {
@@ -240,8 +249,8 @@ export default function MapView() {
               zoomControl={true}
             >
               <TileLayer
-                attribution='&copy; <a href="https://carto.com/">CartoDB</a> Dark Matter'
-                url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                attribution={theme === 'light' ? '&copy; <a href="https://carto.com/">CartoDB</a> Voyager' : '&copy; <a href="https://carto.com/">CartoDB</a> Dark Matter'}
+                url={theme === 'light' ? 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'}
               />
 
               <MapController focusCoords={focusCoords} />

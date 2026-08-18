@@ -26,6 +26,22 @@ export default function Navbar() {
   const location = useLocation();
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-mode');
+    } else {
+      document.body.classList.remove('light-mode');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    window.dispatchEvent(new Event('theme-change'));
+  };
 
   // Re-subscribe with fresh keys (used when existing sub is stale/expired)
   const forceResubscribe = async (registration) => {
@@ -190,6 +206,16 @@ export default function Navbar() {
           </button>
         )}
 
+
+        <button
+          className="nav-btn"
+          onClick={toggleTheme}
+          title="Toggle Light/Dark Mode"
+          style={{ padding: 'var(--sp-2) var(--sp-3)', display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          <span>{theme === 'dark' ? '☀️' : '🌙'}</span>
+          <span className="nav-btn-text">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+        </button>
 
         {user ? (
           <div className="flex items-center gap-3">
