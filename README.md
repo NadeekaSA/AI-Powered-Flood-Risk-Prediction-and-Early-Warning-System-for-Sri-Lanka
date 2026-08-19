@@ -5,7 +5,7 @@ The **AI-Powered Flood Risk Prediction and Early Warning System** is a comprehen
 
 ## ✨ Key Features
 - **Real-Time Data Integration:** Scrapes live river level data from the Sri Lanka DMC website to keep the system updated.
-- **AI/ML Flood Prediction:** Utilizes trained Machine Learning models (Random Forest Regressors) to predict future water levels based on historical and real-time data.
+- **AI/ML Flood Prediction:** Utilizes trained Machine Learning models including a **Random Forest Regressor** (to predict numeric flood depth) and a **Random Forest Classifier** (to predict discrete flood risk levels: Low, Medium, High, Critical) based on historical and real-time data.
 - **Interactive Mapping:** Features a React-Leaflet based interactive map showing river stations, current water levels, and status indicators (Normal, Alert, Minor Flood, Major Flood).
 - **Push Notifications:** Implements Web Push (VAPID) to send instant alerts to subscribed users when their nearby stations exceed safety thresholds.
 - **User Authentication & Authorization:** Secure JWT-based authentication with distinct roles (Public users and Administrators).
@@ -158,7 +158,7 @@ flood_predict/
 ## 🤖 Machine Learning Pipeline
 The ML pipeline is centered around predicting future river levels based on historical gauge readings and rainfall data.
 - **EDA:** The `dataset/flood_eda.ipynb` contains the exploratory data analysis, feature engineering, and model training processes.
-- **Models:** The system uses Random Forest Regressors, which are serialized as `.pkl` files and loaded into memory by the Flask backend for real-time inference when the `/api/predictions` endpoint is called.
+- **Models:** The system uses two types of models based on Random Forests: a **Classifier** for predicting discrete flood risk levels, and a **Regressor** for predicting numerical flood depth. These are serialized as `.pkl` files and loaded into memory by the Flask backend for real-time inference when the `/api/predictions` endpoint is called.
 
 ## 🛡️ License & Disclaimer
 This project is intended for educational and early-warning research purposes. While it strives for accuracy, it should **not** replace official disaster management announcements from the Sri Lanka Disaster Management Centre.
