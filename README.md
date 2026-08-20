@@ -4,7 +4,7 @@
 The **AI-Powered Flood Risk Prediction and Early Warning System** is a comprehensive full-stack application designed to predict flood risks across various river stations in Sri Lanka. It leverages machine learning models to forecast river water levels, scrapes real-time data from the Disaster Management Centre (DMC), and issues early warning push notifications to users based on their location and nearest monitoring stations.
 
 ## ✨ Key Features
-- **Real-Time Data Integration:** Scrapes live river level data from the Sri Lanka DMC website to keep the system updated.
+- **Real-Time Data Integration:** Scrapes live river level data sourced from the Sri Lanka Disaster Management Centre (DMC), courtesy of the [nuuuwan/lk_irrigation](https://github.com/nuuuwan/lk_irrigation) GitHub repository, to keep the system updated.
 - **AI/ML Flood Prediction:** Utilizes trained Machine Learning models including a **Random Forest Regressor** (to predict numeric flood depth) and a **Random Forest Classifier** (to predict discrete flood risk levels: Low, Medium, High, Critical) based on historical and real-time data.
 - **Interactive Mapping:** Features a React-Leaflet based interactive map showing river stations, current water levels, and status indicators (Normal, Alert, Minor Flood, Major Flood).
 - **Push Notifications:** Implements Web Push (VAPID) to send instant alerts to subscribed users when their nearby stations exceed safety thresholds.
@@ -162,3 +162,6 @@ The ML pipeline is centered around predicting future river levels based on histo
 
 ## 🛡️ License & Disclaimer
 This project is intended for educational and early-warning research purposes. While it strives for accuracy, it should **not** replace official disaster management announcements from the Sri Lanka Disaster Management Centre.
+
+## 🙏 Acknowledgements
+- River level and hydrology data from the Sri Lanka Disaster Management Centre (DMC) is accessed via the [nuuuwan/lk_irrigation](https://github.com/nuuuwan/lk_irrigation) open-source repository.
