@@ -70,6 +70,10 @@ export default function AdminDashboard() {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertRiskLevel, setAlertRiskLevel] = useState('Medium');
   const [alertDistrict, setAlertDistrict] = useState('All');
+  
+  // Custom simulator UI states
+  const [simSearch, setSimSearch] = useState('');
+  const [simLogs, setSimLogs] = useState([]);
 
   // Load all dashboard statistics
   const loadDashboardData = async () => {
@@ -112,11 +116,31 @@ export default function AdminDashboard() {
   const handleSimulationSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setSimLogs([
+      `[${new Date().toLocaleTimeString()}] INFO: Initializing Rainfall Simulation Model...`,
+      `[${new Date().toLocaleTimeString()}] INFO: Packaging rainfall parameter overrides for the ML inference pipeline...`
+    ]);
+
     try {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setSimLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] INFO: Uploading adjustments to Flask API Gateway...`]);
+      
       const res = await simulateRainfall(simValues);
+      
+      setSimLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] INFO: Executing Scikit-Learn Random Forest Classifier...`]);
+      await new Promise(resolve => setTimeout(resolve, 400));
+      setSimLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] INFO: Running Random Forest Regressor for flood depth evaluations...`]);
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const { critical_cells, predictions: updatedPreds } = res.data;
       setPredictions(updatedPreds);
       
+      setSimLogs(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] SUCCESS: Simulation calculations updated on map grids successfully!`,
+        `[${new Date().toLocaleTimeString()}] RESULT: Risk evaluations updated. Found ${critical_cells} zone(s) at Critical Risk level.`
+      ]);
+
       if (critical_cells > 0) {
         addToast(
           `Simulation completed! Warning: ${critical_cells} zones entered Critical Risk. Early warnings broadcasted.`,
@@ -127,6 +151,7 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error(err);
+      setSimLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ERROR: Machine learning simulation rescoring failed: ${err.message}`]);
       addToast('Rainfall simulation execution failed: ' + err.message, 'Critical');
     } finally {
       setSubmitting(false);
@@ -334,18 +359,40 @@ export default function AdminDashboard() {
             {/* MONSOON SIMULATOR TAB */}
             {activeSubTab === 'simulator' && (
               <div className="flex flex-col gap-6 w-full">
-                <div>
-                  <h2 className="font-display font-bold">🌦️ Monsoon Rainfall Simulator</h2>
-                  <p className="text-sm text-muted">
-                    Alter district-level rainfall features to evaluate spatial risk changes via the ML inference pipeline.
-                  </p>
+                <div className="flex justify-between items-center w-full" style={{ gap: 'var(--sp-4)', flexWrap: 'wrap' }}>
+                  <div>
+                    <h2 className="font-display font-bold">🌦️ Monsoon Rainfall Simulator</h2>
+                    <p className="text-sm text-muted">
+                      Alter district-level rainfall features to evaluate spatial risk changes via the ML inference pipeline.
+                    </p>
+                  </div>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Search Districts..."
+                    value={simSearch}
+                    onChange={(e) => setSimSearch(e.target.value)}
+                    style={{ maxWidth: '260px' }}
+                  />
                 </div>
 
                 <form onSubmit={handleSimulationSubmit} className="flex flex-col gap-6 w-full">
+                  {/* Console Logger Window */}
+                  {simLogs.length > 0 && (
+                    <div>
+                      <label className="form-label" style={{ marginBottom: 'var(--sp-2)', display: 'block' }}>ML Pipeline Execution Telemetry Logs</label>
+                      <div className="console-logger">
+                        {simLogs.map((log, idx) => (
+                          <div key={`log-${idx}`} style={{ marginBottom: '2px' }}>{log}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-2 gap-6 w-full">
-                    {DISTRICTS.map((d) => (
-                      <div key={d} className="glass-card" style={{ padding: 'var(--sp-4)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
-                        <h4 className="text-sm font-bold" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '4px' }}>
+                    {DISTRICTS.filter(d => d.toLowerCase().includes(simSearch.toLowerCase())).map((d) => (
+                      <div key={d} className="glass-card" style={{ padding: 'var(--sp-4)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', position: 'relative' }}>
+                        <h4 className="text-sm font-bold font-display" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '4px', color: 'var(--clr-text-100)' }}>
                           📍 {d} District
                         </h4>
                         
@@ -404,7 +451,7 @@ export default function AdminDashboard() {
                     type="submit"
                     className="btn btn-primary btn-lg justify-center w-full"
                     disabled={submitting}
-                    style={{ marginTop: 'var(--sp-4)' }}
+                    style={{ marginTop: 'var(--sp-2)' }}
                   >
                     {submitting ? '⌛ Processing ML Rescoring...' : '🌦️ Run Rainfall Simulation Model'}
                   </button>

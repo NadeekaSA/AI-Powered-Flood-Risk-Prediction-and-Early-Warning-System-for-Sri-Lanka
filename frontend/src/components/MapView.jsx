@@ -174,6 +174,50 @@ export default function MapView() {
       `}</style>
 
       <div className="app-main">
+        {/* Floating Quick Summary Console */}
+        {!loading && (
+          <div className="floating-summary-panel glass-card" style={{
+            position: 'absolute',
+            top: 'var(--sp-4)',
+            right: 'var(--sp-4)',
+            zIndex: 10,
+            padding: 'var(--sp-3) var(--sp-4)',
+            display: 'flex',
+            gap: 'var(--sp-4)',
+            alignItems: 'center',
+            fontSize: '0.8rem',
+            pointerEvents: 'auto'
+          }}>
+            <div className="summary-stat-item" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+              <span style={{ fontSize: '1.15rem' }}>🛰️</span>
+              <div>
+                <div style={{ color: 'var(--clr-text-300)', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Monitored Gauges</div>
+                <div style={{ fontWeight: 800, color: 'var(--clr-primary)', fontSize: '0.88rem' }}>{stations.length} Active</div>
+              </div>
+            </div>
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }}></div>
+            <div className="summary-stat-item" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+              <span style={{ fontSize: '1.15rem' }}>⚠️</span>
+              <div>
+                <div style={{ color: 'var(--clr-text-300)', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Critical Zones</div>
+                <div style={{ fontWeight: 800, color: 'var(--risk-critical)', fontSize: '0.88rem' }}>
+                  {predictions.filter(p => p.predicted_risk === 'Critical').length} Grid Cells
+                </div>
+              </div>
+            </div>
+            <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)' }}></div>
+            <div className="summary-stat-item" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+              <span style={{ fontSize: '1.15rem' }}>📢</span>
+              <div>
+                <div style={{ color: 'var(--clr-text-300)', fontWeight: 500, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.02em' }}>Active Warnings</div>
+                <div style={{ fontWeight: 800, color: 'var(--risk-high)', fontSize: '0.88rem' }}>
+                  {alerts.filter(a => a.is_active).length} Bulletins
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Sidebar */}
         <aside className="sidebar">
           <div style={{ padding: 'var(--sp-4)', borderBottom: '1px solid var(--border-subtle)' }}>

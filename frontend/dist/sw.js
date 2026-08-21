@@ -27,6 +27,37 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Fires when the push service invalidates the old subscription (e.g. expired/rotated)
+// Automatically re-subscribes with fresh keys and notifies the backend
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const API_BASE = 'http://localhost:5000/api';
+
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription.options)
+      .then(async (newSubscription) => {
+        const payload = newSubscription.toJSON();
+        const token = await self.clients.matchAll().then(clientList => {
+          // Try to get auth token from a client (best effort)
+          return null; // SW can't access localStorage directly
+        });
+
+        await fetch(`${API_BASE}/alerts/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            endpoint: payload.endpoint,
+            p256dh: payload.keys?.p256dh,
+            auth: payload.keys?.auth
+          })
+        });
+        console.log('[SW] Push subscription refreshed via pushsubscriptionchange.');
+      })
+      .catch(err => {
+        console.error('[SW] Failed to refresh push subscription:', err);
+      })
+  );
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';

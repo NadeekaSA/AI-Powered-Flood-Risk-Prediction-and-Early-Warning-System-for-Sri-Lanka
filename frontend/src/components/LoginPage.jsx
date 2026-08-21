@@ -186,14 +186,27 @@ export default function LoginPage() {
   return (
     <div className="login-page-container">
       <div className={`glass-card login-page-card ${!isLogin ? 'register-mode' : ''}`}>
-        <div style={{ textAlign: 'center' }}>
-          <h2 className="font-display font-bold" style={{ fontSize: '1.8rem', color: 'var(--clr-text-100)' }}>
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--sp-2)' }}>
+          <div style={{
+            fontSize: '1.75rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '54px',
+            height: '54px',
+            background: 'var(--clr-primary-glow)',
+            border: '1px solid var(--border-active)',
+            borderRadius: '50%',
+            marginBottom: 'var(--sp-2)',
+            filter: 'drop-shadow(0 4px 10px var(--clr-primary-glow))'
+          }}>🌊</div>
+          <h2 className="font-display font-bold" style={{ fontSize: '1.6rem', color: 'var(--clr-text-100)', letterSpacing: '-0.01em' }}>
+            {isLogin ? 'Command Portal' : 'Register Console'}
           </h2>
-          <p className="text-sm text-muted" style={{ marginTop: 'var(--sp-1)' }}>
+          <p className="text-xs text-muted" style={{ marginTop: '2px', lineHeight: '1.4' }}>
             {isLogin
-               ? 'Access the FloodWatch SL Command Console'
-               : 'Sign up for early warning push notifications'}
+               ? 'Access the FloodWatch SL Emergency Warning & Prediction System'
+               : 'Register device to receive early warning push alerts from nearby stations'}
           </p>
         </div>
 
